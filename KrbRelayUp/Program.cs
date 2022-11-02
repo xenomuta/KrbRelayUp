@@ -1,6 +1,7 @@
 using System;
 using System.DirectoryServices.Protocols;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -27,6 +28,7 @@ namespace KrbRelayUp
         public static string domainController = null;
         public static bool useSSL = false;
         public static int ldapPort = 389;
+        public static string specificIP = null;
         public static bool useCreateNetOnly = false;
         public static bool verbose = false;
 
@@ -153,11 +155,15 @@ namespace KrbRelayUp
             // General Options
             int iDomain = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(d|Domain)$").Match(s).Success);
             int iDomainController = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(dc|DomainController)$").Match(s).Success);
+            int iSpecificIP = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(ip)$").Match(s).Success);
+            int iLdapPort = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(ldapPort)$").Match(s).Success);
             int iSSL = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(ssl)$").Match(s).Success);
             int iCreateNetOnly = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(n|CreateNetOnly)$").Match(s).Success);
             int iVerbose = Array.FindIndex(args, s => new Regex(@"(?i)(-|--)(v|Verbose)$").Match(s).Success);
             Options.domain = (iDomain != -1) ? args[iDomain + 1] : Options.domain;
             Options.domainController = (iDomainController != -1) ? args[iDomainController + 1] : Options.domainController;
+            Options.specificIP = (iSpecificIP != -1) ? args[iSpecificIP + 1] : Options.domainController;
+            Options.ldapPort = (iLdapPort != -1) ? int.Parse(args[iLdapPort + 1]) : Options.ldapPort;
             Options.useSSL = (iSSL != -1) ? true : Options.useSSL;
             if (Options.useSSL)
                 Options.ldapPort = 636;
@@ -289,8 +295,12 @@ namespace KrbRelayUp
                 Relay.Relay.InitializeCOMServer();
 
                 // Bind to LDAP using current authenticated user
-                LdapDirectoryIdentifier identifier = new LdapDirectoryIdentifier(Options.domainController, Options.ldapPort);
+                LdapDirectoryIdentifier identifier = new LdapDirectoryIdentifier(Options.specificIP, Options.ldapPort);
                 LdapConnection ldapConnection = new LdapConnection(identifier);
+
+                ldapConnection.SessionOptions.DomainName = Options.domain;
+                ldapConnection.SessionOptions.HostName = Options.specificIP;
+                ldapConnection.SessionOptions.VerifyServerCertificate = (LdapConnection connection, X509Certificate certificate) => true;
                 
                 // spoppi make SSL work 
                 if (Options.useSSL)
