@@ -82,7 +82,7 @@ namespace KrbRelayUp.Relay
                 tv_sec = (int)(new TimeSpan(0, 0, 60).Ticks / TimeSpan.TicksPerSecond)
             };
 
-            ld = ldap_init(Options.domainController, (uint)Options.ldapPort);
+            ld = ldap_init(Options.bounceIP, (uint)Options.bouncePort);
 
 
             uint LDAP_OPT_ON = 1;
